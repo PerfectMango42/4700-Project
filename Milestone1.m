@@ -19,11 +19,14 @@ RR = 0.9i;                  % Right reflectivity coefficient
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
 InputParasL.E0 = 1e5;   % Amplitude of electric field
-InputParasL.we = 0;     % Frequency offset
+InputParasL.we = 1e13;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
 InputParasR = 0;        % No wave starting from the right
+
+beta_r = 80;            % Real part of the detuning 
+beta_i = 8;            % Imaginary part of the detuning
 
 n_g = 3.5;              % index of refraction
 vg = c_c/n_g*1e2;       % TWM cm/s group velocity
@@ -33,7 +36,7 @@ plotN = 10;             % value to know which N you should plot the points for
 
 L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
-YL = [0,InputParasL.E0];% Y axis range in a matrix
+YL = [-3*InputParasL.E0,3*InputParasL.E0];% Y axis range in a matrix
 
 Nz = 500;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
@@ -102,6 +105,9 @@ xlabel('time(ps)')
 ylabel('E')
 hold off
 
+beta = ones(size(z))*(beta_r+1i*beta_i);    % Creates a matrix of 1's of specified size times the detuning term
+exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
+
 for i = 2:Nt        % Iterate from 2 to the number of time steps
     t = dt*(i-1);   % Determine next time according to spacial step size and current iteration
     time(i) = t;    % Increment time
@@ -114,9 +120,11 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
 
     % Updates the current Ef and Er over the spatial grid, ensuring to
-    % normalize 
-    Ef(2:Nz) = fsync*Ef(1:Nz-1);
-    Er(1:Nz-1) = fsync*Er(2:Nz);
+    % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
+    % does element wise multiplication of the corresponding exponential
+    Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1);   
+    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz);
+
     % nan values that get assigned the boundaries of forward and reverse electric fields
     OutputR(i) = Ef(Nz)*(1-RR);     % Adding the loss from the mirrors reflectivity
     OutputL(i) = Er(1)*(1-RL);      % Adding the loss from the mirrors reflectivity
@@ -159,3 +167,26 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
 end
+% Create the Fourier Transform calculation 
+fftOutput = fftshift(fft(OutputR));
+omega = fftshift(wspace(time));
+% Plot the Fourier Transform results as frequency
+% Plot of right output vs time
+figure('name', 'Fields')
+subplot(3,1,1)
+plot(time*1e12, real(OutputR),'r');
+hold off
+xlabel('time(ps)')
+ylabel('Right Output')
+% Plot of absolute value of fourier transform vs omega
+subplot(3,1,2)
+plot(omega,abs(fftOutput),'b');
+xlabel('omega')
+ylabel('Magnitude of Fourier Transform Output')
+hold off
+% Inputs and Outputs over time in picoseconds
+subplot(3,1,3)
+plot(omega,unwrap(angle(fftOutput)),'g');
+xlabel('omega')
+ylabel('Phase of Fourier Transform Output')
+hold off
