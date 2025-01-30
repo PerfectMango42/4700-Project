@@ -13,8 +13,8 @@ c_q = 1.60217653e-19;       % charge of electron
 c_hb = 1.05457266913e-34;   % Dirac constant
 c_h = c_hb*2*pi;            % 2 pi Dirac constant
 
-RL = 0.9i;                  % Left reflectivity coefficient
-RR = 0.9i;                  % Right reflectivity coefficient
+RL = 0;                  % Left reflectivity coefficient
+RR = 0;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
@@ -28,7 +28,7 @@ InputParasR = 0;        % No wave starting from the right
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
 
-kappa0 = 100;
+kappa0 = 100;           % Creating a matrix 
 kappaStart = 1/3;
 kappaStop = 2/3;
 
@@ -40,7 +40,7 @@ plotN = 10;             % value to know which N you should plot the points for
 
 L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
-YL = [-1*InputParasL.E0,1*InputParasL.E0];% Y axis range in a matrix
+YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
 
 Nz = 500;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
@@ -59,13 +59,14 @@ InputR = nan(1,Nt);     % Row vector of size 1 - Nt
 OutputL = nan(1,Nt);    % Row vector of size 1 - Nt
 OutputR = nan(1,Nt);    % Row vector of size 1 - Nt
 
-kappa = kappa0*ones(size(z));
+kappa = kappa0*ones(size(z));   % Adding kappa terms for grating
 kappa(z<L*kappaStart) = 0;
 kappa(z>L*kappaStop) = 0;
 
 % Initializing Electric fields
 Ef = zeros(size(z));    % z has Nz elements 
 Er = zeros(size(z));    % z has Nz elements
+Efprev = zeros(size(z));
 
 % SourceFct creates a function handle (allow you to pass functions as
 % arguments to other functions, store them...)
@@ -130,8 +131,17 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     % Updates the current Ef and Er over the spatial grid, ensuring to
     % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
     % does element wise multiplication of the corresponding exponential
-    Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   
-    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Ef(1:Nz-1);
+    if i >= 3
+        % Efprev has been populated
+        Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);
+        Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Efprev(1:Nz-1);
+    else
+        % Efprev has not been populated
+        Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   
+        Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Ef(1:Nz-1);
+    end 
+
+    Efprev(2:Nz) = Ef(2:Nz);    % populating Efprev
 
     % nan values that get assigned the boundaries of forward and reverse electric fields
     OutputR(i) = Ef(Nz)*(1-RR);     % Adding the loss from the mirrors reflectivity
@@ -181,15 +191,17 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
 end
+
 % Create the Fourier Transform calculation 
 fftOutputR = fftshift(fft(OutputR));
 fftOutputL = fftshift(fft(OutputL));
 omega = fftshift(wspace(time));
+
 % Plot the Fourier Transform results as frequency
 % Plot of right output vs time
 figure('name', 'Fields')
 subplot(3,1,1)
-plot(time*1e12, real(OutputR),'g'); hold on
+plot(time*1e12, real(OutputR),'m'); hold on
 plot(time*1e12, real(OutputL),'b');
 xlabel('time(ps)')
 ylabel('Output')
@@ -198,8 +210,8 @@ hold off
 
 % Plot of absolute value of fourier transform vs omega
 subplot(3,1,2)
-plot(omega,abs(fftOutputR),'g'); hold on
-plot(omega,abs(fftOutputL),'b');
+plot(omega,abs(fftOutputR),'y'); hold on
+plot(omega,abs(fftOutputL),'r');
 xlabel('omega')
 ylabel('FFT |E|')
 legend('Right', 'Left')
@@ -207,7 +219,7 @@ hold off
 % Inputs and Outputs over time in picoseconds
 subplot(3,1,3)
 plot(omega,unwrap(angle(fftOutputR)),'g'); hold on
-plot(omega,unwrap(angle(fftOutputL)),'b');
+plot(omega,unwrap(angle(fftOutputL)),'c');
 xlabel('omega')
 ylabel('FFT Angle')
 legend('Right', 'Left')
