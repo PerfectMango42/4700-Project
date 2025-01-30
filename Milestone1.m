@@ -25,8 +25,8 @@ InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
 InputParasR = 0;        % No wave starting from the right
 
-beta_r = 80;            % Real part of the detuning 
-beta_i = 8;            % Imaginary part of the detuning
+beta_r = 0;            % Real part of the detuning 
+beta_i = 0;            % Imaginary part of the detuning
 
 kappa0 = 100;
 kappaStart = 1/3;
@@ -131,7 +131,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
     % does element wise multiplication of the corresponding exponential
     Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   
-    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Ef(2:Nz);
+    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Ef(1:Nz-1);
 
     % nan values that get assigned the boundaries of forward and reverse electric fields
     OutputR(i) = Ef(Nz)*(1-RR);     % Adding the loss from the mirrors reflectivity
@@ -182,25 +182,33 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     end
 end
 % Create the Fourier Transform calculation 
-fftOutput = fftshift(fft(OutputR));
+fftOutputR = fftshift(fft(OutputR));
+fftOutputL = fftshift(fft(OutputL));
 omega = fftshift(wspace(time));
 % Plot the Fourier Transform results as frequency
 % Plot of right output vs time
 figure('name', 'Fields')
 subplot(3,1,1)
-plot(time*1e12, real(OutputR),'r');
-hold off
+plot(time*1e12, real(OutputR),'g'); hold on
+plot(time*1e12, real(OutputL),'b');
 xlabel('time(ps)')
-ylabel('Right Output')
+ylabel('Output')
+legend('Right', 'Left')
+hold off
+
 % Plot of absolute value of fourier transform vs omega
 subplot(3,1,2)
-plot(omega,abs(fftOutput),'b');
+plot(omega,abs(fftOutputR),'g'); hold on
+plot(omega,abs(fftOutputL),'b');
 xlabel('omega')
-ylabel('Magnitude of Fourier Transform Output')
+ylabel('FFT |E|')
+legend('Right', 'Left')
 hold off
 % Inputs and Outputs over time in picoseconds
 subplot(3,1,3)
-plot(omega,unwrap(angle(fftOutput)),'g');
+plot(omega,unwrap(angle(fftOutputR)),'g'); hold on
+plot(omega,unwrap(angle(fftOutputL)),'b');
 xlabel('omega')
-ylabel('Phase of Fourier Transform Output')
+ylabel('FFT Angle')
+legend('Right', 'Left')
 hold off
