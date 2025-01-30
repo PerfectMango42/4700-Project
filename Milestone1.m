@@ -19,7 +19,7 @@ RR = 0.9i;                  % Right reflectivity coefficient
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
 InputParasL.E0 = 1e5;   % Amplitude of electric field
-InputParasL.we = 1e13;     % Frequency offset
+InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
@@ -182,11 +182,11 @@ ylabel('Right Output')
 subplot(3,1,2)
 plot(omega,abs(fftOutput),'b');
 xlabel('omega')
-ylabel('Magnitude of Fourier Transform Output')
+ylabel('FFT |E|')
 hold off
 % Inputs and Outputs over time in picoseconds
 subplot(3,1,3)
 plot(omega,unwrap(angle(fftOutput)),'g');
 xlabel('omega')
-ylabel('Phase of Fourier Transform Output')
+ylabel('FFT Phase')
 hold off
