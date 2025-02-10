@@ -12,6 +12,10 @@ c_mu_0 = 1/c_eps_0/c_c^2;   % s^2/Fm
 c_q = 1.60217653e-19;       % charge of electron
 c_hb = 1.05457266913e-34;   % Dirac constant
 c_h = c_hb*2*pi;            % 2 pi Dirac constant
+g_fwhm = 3.53e+012/10;
+LGamma = g_fwhm*2*pi;
+Lw0 = 0.0;
+LGain = 0.1;
 
 RL = 0;                  % Left reflectivity coefficient
 RR = 0;                  % Right reflectivity coefficient
@@ -42,7 +46,7 @@ L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
 YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
 
-Nz = 500;               % total grid steps in the graph
+Nz = 100;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
 dt = dz/vg;             % time step with the corresponding spacial step size
 fsync = dt*vg/dz;       % Always equals 1, syncronizing normalized factor
@@ -68,6 +72,14 @@ Ef = zeros(size(z));    % z has Nz elements
 Er = zeros(size(z));    % z has Nz elements
 Efprev = zeros(size(z));
 
+Pf = zeros(size(z));
+Pr = zeros(size(z));
+
+Efp = Ef;
+Erp = Er;
+Pfp = Pf;
+Prp = Pr;
+
 % SourceFct creates a function handle (allow you to pass functions as
 % arguments to other functions, store them...)
 Ef1 = @SourceFct;
@@ -87,7 +99,7 @@ OutputL(1) = Er(1);
 % Assigning the electric field input values at the boundaries opposite to
 % the outputs
 Ef(1) = InputL(1);
-Er(Nz) = InputR(1);     
+Er(Nz) = InputR(1);   
 
 % Create a figure that contains three sublots, each display different data
 % about the electric fields inputs and outputs
@@ -127,6 +139,20 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
 
     Ef(1) = InputL(i) + RL*Er(1);       % Adding reflectivity coefficients
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
+
+    Pf(1) = 0;
+    Pf(Nz) = 0;
+    Pr(1) = 0;
+    Pr(Nz) = 0;
+    Cw0 = -LGamma + 1i*Lw0;
+
+    Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);
+    Pf(2:Nz-1) = (Pfp(2:Nz-1) + 0.5*dt*Tf)./(1-0.5*dt*Cw0);
+    Tr = LGamma*Er(3:Nz) + Cw0*Prp(2:Nz-1) + LGamma*Erp(3:Nz);
+    Pr(2:Nz-1) = (Prp(2:Nz-1) + 0.5*dt*Tr)./(1-0.5*dt*Cw0);
+
+    Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));
+    Er(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));
 
     % Updates the current Ef and Er over the spatial grid, ensuring to
     % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
@@ -190,6 +216,10 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         hold off
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
+    Efp = Ef;
+    Erp = Er;
+    Pfp = Pf;
+    Prp = Pr;
 end
 
 % Create the Fourier Transform calculation 
