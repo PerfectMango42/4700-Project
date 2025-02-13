@@ -32,7 +32,7 @@ InputParasR = 0;        % No wave starting from the right
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
 
-kappa0 = 100;           % Creating a matrix 
+kappa0 = 0;           % Creating a matrix 
 kappaStart = 1/3;
 kappaStop = 2/3;
 
@@ -227,10 +227,12 @@ fftOutputR = fftshift(fft(OutputR));
 fftOutputL = fftshift(fft(OutputL));
 omega = fftshift(wspace(time));
 
+fftInputL = fftshift(fft(InputL));
+
 % Plot the Fourier Transform results as frequency
 % Plot of right output vs time
 figure('name', 'Fields')
-subplot(3,1,1)
+subplot(4,1,1)
 plot(time*1e12, real(OutputR),'m'); hold on
 plot(time*1e12, real(OutputL),'b');
 xlabel('time(ps)')
@@ -239,7 +241,7 @@ legend('Right', 'Left')
 hold off
 
 % Plot of absolute value of fourier transform vs omega
-subplot(3,1,2)
+subplot(4,1,2)
 plot(omega,abs(fftOutputR),'y'); hold on
 plot(omega,abs(fftOutputL),'r');
 xlabel('omega')
@@ -247,10 +249,19 @@ ylabel('FFT |E|')
 legend('Right', 'Left')
 hold off
 % Inputs and Outputs over time in picoseconds
-subplot(3,1,3)
+subplot(4,1,3)
 plot(omega,unwrap(angle(fftOutputR)),'g'); hold on
 plot(omega,unwrap(angle(fftOutputL)),'c');
 xlabel('omega')
 ylabel('FFT Angle')
 legend('Right', 'Left')
+hold off
+
+% Magnitude of input vs output in frequency domain
+subplot(4,1,4)
+plot(omega,abs(fftOutputR),'g'); hold on
+plot(omega,abs(fftInputL),'b');
+xlabel('omega')
+ylabel('FFT |E|')
+legend('Output', 'Input')
 hold off
