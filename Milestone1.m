@@ -25,8 +25,8 @@ InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
 InputParasR = 0;        % No wave starting from the right
 
-beta_r = 80;            % Real part of the detuning 
-beta_i = 8;            % Imaginary part of the detuning
+beta_r = 80;            % Real part of beta (detuning)
+beta_i = 8;            % Imaginary part of beta (gain)
 
 n_g = 3.5;              % index of refraction
 vg = c_c/n_g*1e2;       % TWM cm/s group velocity
@@ -120,7 +120,8 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
 
     % Updates the current Ef and Er over the spatial grid, ensuring to
-    % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
+    % normalize (fsync scaling) and accounts for the exponential gain/loss
+    % and detuning parameters in beta
     % does element wise multiplication of the corresponding exponential
     Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1);   
     Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz);
@@ -167,9 +168,13 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
 end
-% Create the Fourier Transform calculation 
+
+% Create the Fourier Transform calculation and convert to easily plotted
+% format
 fftOutput = fftshift(fft(OutputR));
+% Calculate the angular frequency vector
 omega = fftshift(wspace(time));
+
 % Plot the Fourier Transform results as frequency
 % Plot of right output vs time
 figure('name', 'Fields')
@@ -178,12 +183,14 @@ plot(time*1e12, real(OutputR),'r');
 hold off
 xlabel('time(ps)')
 ylabel('Right Output')
+
 % Plot of absolute value of fourier transform vs omega
 subplot(3,1,2)
 plot(omega,abs(fftOutput),'b');
 xlabel('omega')
 ylabel('FFT |E|')
 hold off
+
 % Inputs and Outputs over time in picoseconds
 subplot(3,1,3)
 plot(omega,unwrap(angle(fftOutput)),'g');
