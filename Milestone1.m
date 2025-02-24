@@ -32,7 +32,7 @@ InputParasR = 0;        % No wave starting from the right
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
 
-kappa0 = 0;           % Creating a matrix 
+kappa0 = 100;           % Grating value
 kappaStart = 1/3;
 kappaStop = 2/3;
 
@@ -72,9 +72,11 @@ Ef = zeros(size(z));    % z has Nz elements
 Er = zeros(size(z));    % z has Nz elements
 Efprev = zeros(size(z));
 
+% Initializing polarization values
 Pf = zeros(size(z));
 Pr = zeros(size(z));
 
+% Setting previous values
 Efp = Ef;
 Erp = Er;
 Pfp = Pf;
@@ -140,17 +142,20 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     Ef(1) = InputL(i) + RL*Er(1);       % Adding reflectivity coefficients
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
 
+    % Start with zero polarization
     Pf(1) = 0;
     Pf(Nz) = 0;
     Pr(1) = 0;
     Pr(Nz) = 0;
     Cw0 = -LGamma + 1i*Lw0;
 
+    % Calculate polarization coefficients
     Tf = LGamma*Ef(1:Nz-2) + Cw0*Pfp(2:Nz-1) + LGamma*Efp(1:Nz-2);
     Pf(2:Nz-1) = (Pfp(2:Nz-1) + 0.5*dt*Tf)./(1-0.5*dt*Cw0);
     Tr = LGamma*Er(3:Nz) + Cw0*Prp(2:Nz-1) + LGamma*Erp(3:Nz);
     Pr(2:Nz-1) = (Prp(2:Nz-1) + 0.5*dt*Tr)./(1-0.5*dt*Cw0);
 
+    %determine the new forward and reverse fields based on the polarization
     Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));
     Er(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));
 
@@ -216,6 +221,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         hold off
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
+    % resets the previous values
     Efp = Ef;
     Erp = Er;
     Pfp = Pf;
