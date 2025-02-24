@@ -12,7 +12,7 @@ c_mu_0 = 1/c_eps_0/c_c^2;   % s^2/Fm
 c_q = 1.60217653e-19;       % charge of electron
 c_hb = 1.05457266913e-34;   % Dirac constant
 c_h = c_hb*2*pi;            % 2 pi Dirac constant
-g_fwhm = 3.53e+012/500;
+g_fwhm = 3.53e+012/100;
 LGamma = g_fwhm*2*pi;
 Lw0 = 0.0;
 LGain = 0.001;
@@ -32,7 +32,7 @@ InputParasR = 0;        % No wave starting from the right
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
 
-kappa0 = 40;           % Grating value
+kappa0 = 100;           % Grating value
 kappaStart = 1/3;
 kappaStop = 2/3;
 
@@ -46,7 +46,7 @@ L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
 YL = [-1*InputParasL.E0,1*InputParasL.E0];% Y axis range in a matrix
 
-Nz = 500;               % total grid steps in the graph
+Nz = 200;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
 dt = dz/vg;             % time step with the corresponding spacial step size
 fsync = dt*vg/dz;       % Always equals 1, syncronizing normalized factor
@@ -63,9 +63,13 @@ InputR = nan(1,Nt);     % Row vector of size 1 - Nt
 OutputL = nan(1,Nt);    % Row vector of size 1 - Nt
 OutputR = nan(1,Nt);    % Row vector of size 1 - Nt
 
-kappa = kappa0*ones(size(z));   % Adding kappa terms for grating
-kappa(z<L*kappaStart) = 0;
-kappa(z>L*kappaStop) = 0;
+% change the grating to not be a constant value, and instead slowely
+% increase further into each grating
+
+
+kappa = ones(size(z));
+kappa(z<L*kappaStart) = 0; % no kappa for the first 3rd of waveguide
+kappa(z>L*kappaStop) = 0; % no kappa for the last 3rd of waveguide
 
 % Initializing Electric fields
 Ef = zeros(size(z));    % z has Nz elements 
@@ -83,7 +87,7 @@ Pfp = Pf;
 Prp = Pr;
 
 % Bit code generation
-binary_input = [1 0 1 0 0 1 0 1]; % change sequence for grating 
+binary_input = [1 0 1 0 0 1 0 0 0 1 1 1]; % change sequence for grating 
 
 % length of the input
 length_input = length(binary_input);
@@ -93,18 +97,48 @@ l = L*kappaStart / length_input;
 
 % each grating location is from L/3 to L/3 + l up to 2L/3
 % loop through the binary input and setup the gratings for 1 values
+% The kappa for each grating increases further down the waveguide,
+% additionally each kappa within each grating greadually increases
 for i = 1:length_input
 
+    % each part of the waveguide where the grating could go
     start_position = L*kappaStart + l*(i-1);
     end_position = L*kappaStart + l*i;
+
+    % the space along the waveguide to set the kappa value
+    index_kappa = (z >= start_position & z < end_position);
+    
+    % minimum and maximum kappa values
+    max_kappa = 125;
+    min_kappa = 100;
+
+    % Create an exponential growth trend over the waveguide
+    kappa_trend = min_kappa + (max_kappa - min_kappa) * (exp(linspace(0, 1, length_input)) - 1) / (exp(1) - 1);
 
     % Doesnt matter about 1 becuase kappa is already full of 1
     if binary_input(i) == 0
         % put no grating here
-        kappa(z >= start_position & z < end_position) = 0;
+        kappa(index_kappa) = 0;
+    else
+
+        % smooth transition within the grating
+        z_smooth = z(index_kappa);  % Extract the relevant z values
+
+         % Ensure we don't go out of bounds
+        if i < length_input
+            kappa_end = kappa_trend(i+1);
+        else
+            % Keep constant for the last grating
+            kappa_end = kappa_trend(i); 
+        end
+
+        % gradual increase within the grating
+        kappa_values = linspace(kappa_trend(i), kappa_end, length(z_smooth)); 
+        
+        % Assign gradually increasing kappa values within the grating
+        kappa(index_kappa) = kappa_values;
     end
 end
-
 
 
 % SourceFct creates a function handle (allow you to pass functions as
