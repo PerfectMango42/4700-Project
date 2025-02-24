@@ -19,7 +19,7 @@ RR = 0;                  % Right reflectivity coefficient
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
 InputParasL.E0 = 1e5;   % Amplitude of electric field
-InputParasL.we = 0;     % Frequency offset
+InputParasL.we = 1e13;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
@@ -28,9 +28,9 @@ InputParasR = 0;        % No wave starting from the right
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
 
-kappa0 = 100;           % Creating a matrix 
-kappaStart = 1/3;
-kappaStop = 2/3;
+kappa0 = 100;           % the value of the grating
+kappaStart = 1/3;       % where the grating starts in the waveguide
+kappaStop = 2/3;        % where the grating ends in the waveguide
 
 n_g = 3.5;              % index of refraction
 vg = c_c/n_g*1e2;       % TWM cm/s group velocity
@@ -182,7 +182,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         ylabel('0')
         legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
         hold off
-
+        % Adding the plot of the grating by showing where kappa is
         subplot(2,2,4);
         plot (z*1000, kappa, 'r');
         xlabel('z(\mum)')
@@ -216,6 +216,7 @@ xlabel('omega')
 ylabel('FFT |E|')
 legend('Right', 'Left')
 hold off
+
 % Inputs and Outputs over time in picoseconds
 subplot(3,1,3)
 plot(omega,unwrap(angle(fftOutputR)),'g'); hold on
