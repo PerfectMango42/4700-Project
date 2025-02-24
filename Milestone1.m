@@ -12,17 +12,17 @@ c_mu_0 = 1/c_eps_0/c_c^2;   % s^2/Fm
 c_q = 1.60217653e-19;       % charge of electron
 c_hb = 1.05457266913e-34;   % Dirac constant
 c_h = c_hb*2*pi;            % 2 pi Dirac constant
-g_fwhm = 3.53e+012/10;
+g_fwhm = 3.53e+012/500;
 LGamma = g_fwhm*2*pi;
 Lw0 = 0.0;
-LGain = 0.1;
+LGain = 0.001;
 
 RL = 0;                  % Left reflectivity coefficient
 RR = 0;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 1e5;   % Amplitude of electric field
+InputParasL.E0 = 1e15;   % Amplitude of electric field
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
@@ -32,7 +32,7 @@ InputParasR = 0;        % No wave starting from the right
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
 
-kappa0 = 100;           % Grating value
+kappa0 = 40;           % Grating value
 kappaStart = 1/3;
 kappaStop = 2/3;
 
@@ -44,9 +44,9 @@ plotN = 10;             % value to know which N you should plot the points for
 
 L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
-YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
+YL = [-1*InputParasL.E0,1*InputParasL.E0];% Y axis range in a matrix
 
-Nz = 100;               % total grid steps in the graph
+Nz = 500;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
 dt = dz/vg;             % time step with the corresponding spacial step size
 fsync = dt*vg/dz;       % Always equals 1, syncronizing normalized factor
@@ -81,6 +81,31 @@ Efp = Ef;
 Erp = Er;
 Pfp = Pf;
 Prp = Pr;
+
+% Bit code generation
+binary_input = [1 0 1 0 0 1 0 1]; % change sequence for grating 
+
+% length of the input
+length_input = length(binary_input);
+
+% spacing of each grating on waveguide
+l = L*kappaStart / length_input;
+
+% each grating location is from L/3 to L/3 + l up to 2L/3
+% loop through the binary input and setup the gratings for 1 values
+for i = 1:length_input
+
+    start_position = L*kappaStart + l*(i-1);
+    end_position = L*kappaStart + l*i;
+
+    % Doesnt matter about 1 becuase kappa is already full of 1
+    if binary_input(i) == 0
+        % put no grating here
+        kappa(z >= start_position & z < end_position) = 0;
+    end
+end
+
+
 
 % SourceFct creates a function handle (allow you to pass functions as
 % arguments to other functions, store them...)
@@ -123,7 +148,7 @@ subplot(3,1,3)
 plot(time*1e12, real(InputL), 'r'); hold on
 plot(time*1e12, real(OutputR), 'r--'); 
 plot(time*1e12, real(InputR), 'b'); hold on
-plot(time*1e12, real(OutputL), 'b--');
+plot(time*1e12, imag(OutputL), 'b--');
 xlabel('time(ps)')
 ylabel('E')
 hold off
@@ -206,7 +231,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         plot(time*1e12, real(InputL), 'r'); hold on
         plot(time*1e12, real(OutputR), 'g'); 
         plot(time*1e12, real(InputR), 'b');
-        plot(time*1e12, real(OutputL), 'm');
+        plot(time*1e12, imag(OutputL), 'm');
         xlim([0,Nt*dt*1e12])            % Sets total simulation time (number of time steps * length of each step)
         ylim(YL)                        % Ensures plot is big enough for electric field amplitude
         xlabel('time(ps)')
