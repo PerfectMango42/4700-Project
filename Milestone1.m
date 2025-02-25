@@ -113,7 +113,9 @@ for i = 1:length_input
     min_kappa = 100;
 
     % Create an exponential growth trend over the waveguide
-    kappa_trend = min_kappa + (max_kappa - min_kappa) * (exp(linspace(0, 1, length_input)) - 1) / (exp(1) - 1);
+    % Just for informational purposes, I used AI to generate the following
+    % calculation for the exponential growth
+    kappa_trend = min_kappa + (max_kappa - min_kappa) * (exp(linspace(0, 1, length_input)) - 1) / (exp(1) - 1); 
 
     % Doesnt matter about 1 becuase kappa is already full of 1
     if binary_input(i) == 0
