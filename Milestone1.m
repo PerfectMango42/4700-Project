@@ -22,17 +22,13 @@ RR = 0;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 10e6;   % Amplitude of electric field
+InputParasL.E0 = 5e6;   % Amplitude of electric field
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
 InputParasL.rep = 5e-10;   % Number of repeating waves to send
 InputParasR = 0;        % No wave starting from the right
-
-
-beta_r = 0;            % Real part of the detuning 
-beta_i = 0;            % Imaginary part of the detuning
 
 kappa0 = 0;           % Creating a matrix 
 kappaStart = 1/3;
@@ -66,6 +62,24 @@ InputL = nan(1,Nt);     % Row vector of size 1 - Nt
 InputR = nan(1,Nt);     % Row vector of size 1 - Nt
 OutputL = nan(1,Nt);    % Row vector of size 1 - Nt
 OutputR = nan(1,Nt);    % Row vector of size 1 - Nt
+
+% generating N variables and limits for plotting
+Ntr = 1e18;
+Nlim = [0, 5*Ntr];
+N = ones(size(z))*Ntr;
+Nave = nan(1,Nt);
+Nave(1) = mean(N);
+gain = vg*2.5e-16;
+eVol = 1.5e-10*c_q;
+% Starting the injection at 0.25ps, ending injection at 3ps
+Ion = 0.25e-9;
+Ioff = 3e-9;
+I_off = 0.024;
+I_on = 0.1;
+taun = 1e-9;
+Zg = sqrt(c_mu_0/c_eps_0)/n_g;
+EtoP = 1/(Zg*f0*vg*1e-2*c_hb);
+alpha = 0;
 
 kappa = kappa0*ones(size(z));   % Adding kappa terms for grating
 kappa(z<L*kappaStart) = 0;
@@ -105,24 +119,10 @@ OutputL(1) = Er(1);
 Ef(1) = InputL(1);
 Er(Nz) = InputR(1);   
 
-% generating N variables and limits for plotting
-Ntr = 1e18;
-Nlim = [0, 5*Ntr];
-N = ones(size(z))*Ntr;
-Nave = nan(1,Nt);
-Nave(1) = mean(N);
-gain = vg*2.5e-16;
-eVol = 1.5e-10*c_q;
-% Starting the injection at 0.25ps, ending injection at 3ps
-Ion = 0.25e-9;
-Ioff = 3e-9;
-I_off = 0.024;
-I_on = 0.1;
-taun = 1e-9;
-Zg = sqrt(c_mu_0/c_eps_0)/n_g;
-EtoP = 1/(Zg*f0*vg*1e-2*c_hb);
-alpha = 0;
-
+% SPE amplification variables
+beta_spe = .3e5;
+gamma = 1.0;
+SPE = 0;
 
 % Create a figure that contains three sublots, each display different data
 % about the electric fields inputs and outputs
@@ -149,8 +149,8 @@ xlabel('time(ps)')
 ylabel('E')
 hold off
 
-beta = ones(size(z))*(beta_r+1i*beta_i);    % Creates a matrix of 1's of specified size times the detuning term
-exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
+% beta = ones(size(z))*(beta_r+1i*beta_i);    % Creates a matrix of 1's of specified size times the detuning term
+% exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
 
 for i = 2:Nt        % Iterate from 2 to the number of time steps
     t = dt*(i-1);   % Determine next time according to spacial step size and current iteration
@@ -186,6 +186,29 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));
     Er(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));
 
+
+    beta_r = 0;            % Real part of the detuning 
+    gain_z = gain.*(N - Ntr)./vg;
+    beta_i = (gain_z - alpha)./2;            % Imaginary part of the detuning
+    beta = beta_r + 1i*beta_i;
+    exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
+
+    % SPE Amplification
+    A = sqrt(gamma*beta_spe*c_hb*f0*L*1e-2/taun)/(2*Nz);
+    if SPE > 0
+        Tf = (randn(Nz,1) + 1i*randn(Nz,1))*A;
+        Tr = (randn(Nz,1) + 1i*randn(Nz,1))*A;
+    else
+        Tf = (ones(Nz,1))*A;
+        Tr = (ones(Nz,1))*A;
+    end
+
+    EsF = Tf*abs(SPE).*sqrt(N.*1e6);
+    EsR = Tr*abs(SPE).*sqrt(N.*1e6);
+
+    Ef = Ef + EsF;
+    Er = Er + EsR;
+
     % Updates the current Ef and Er over the spatial grid, ensuring to
     % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
     % does element wise multiplication of the corresponding exponential
@@ -219,7 +242,6 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     Stim = gain.*(N - Ntr).*S;
     N = (N + dt*(I_injv/eVol - Stim))./(1 + dt/taun);
     Nave(i) = mean(N);
-
 
     % Create the plots that visualize the forward and reverse propagating
     % electric fields
