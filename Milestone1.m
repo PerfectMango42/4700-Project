@@ -22,12 +22,14 @@ RR = 0;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 1e5;   % Amplitude of electric field
+InputParasL.E0 = 10e6;   % Amplitude of electric field
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
+InputParasL.rep = 5e-10;   % Number of repeating waves to send
 InputParasR = 0;        % No wave starting from the right
+
 
 beta_r = 0;            % Real part of the detuning 
 beta_i = 0;            % Imaginary part of the detuning
@@ -39,19 +41,21 @@ kappaStop = 2/3;
 n_g = 3.5;              % index of refraction
 vg = c_c/n_g*1e2;       % TWM cm/s group velocity
 Lambda = 1550e-9;       % wavelength in nm 
+f0 = c_c/Lambda;
 
-plotN = 10;             % value to know which N you should plot the points for
+plotN = 100;             % value to know which N you should plot the points for
 
 L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
-YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
+%YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
+YL = [0,1e7];
 
 Nz = 100;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
 dt = dz/vg;             % time step with the corresponding spacial step size
 fsync = dt*vg/dz;       % Always equals 1, syncronizing normalized factor
 
-Nt = floor(2*Nz);       % number of time steps (discrete number time points in simulation)
+Nt = floor(400*Nz);       % number of time steps (discrete number time points in simulation)
 tmax = Nt*dt;           % total simulation time
 t_L = dt*Nz;            % time to travel length
 
@@ -101,6 +105,25 @@ OutputL(1) = Er(1);
 Ef(1) = InputL(1);
 Er(Nz) = InputR(1);   
 
+% generating N variables and limits for plotting
+Ntr = 1e18;
+Nlim = [0, 5*Ntr];
+N = ones(size(z))*Ntr;
+Nave = nan(1,Nt);
+Nave(1) = mean(N);
+gain = vg*2.5e-16;
+eVol = 1.5e-10*c_q;
+% Starting the injection at 0.25ps, ending injection at 3ps
+Ion = 0.25e-9;
+Ioff = 3e-9;
+I_off = 0.024;
+I_on = 0.1;
+taun = 1e-9;
+Zg = sqrt(c_mu_0/c_eps_0)/n_g;
+EtoP = 1/(Zg*f0*vg*1e-2*c_hb);
+alpha = 0;
+
+
 % Create a figure that contains three sublots, each display different data
 % about the electric fields inputs and outputs
 % Forward propagating electric field at the left side
@@ -133,6 +156,15 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     t = dt*(i-1);   % Determine next time according to spacial step size and current iteration
     time(i) = t;    % Increment time
     
+    % if (t == 0.5e-9)
+    %     % nan values that get assigned values from the SourceFct with the InputParas structures, and the current time
+    %     InputL(i) = Ef1(t, InputParasL);
+    %     InputR(i) = ErN(t, InputParasR);
+    % 
+    %     Ef(1) = InputL(i) + RL*Er(1);       % Adding reflectivity coefficients
+    %     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
+    % end
+        
     % nan values that get assigned values from the SourceFct with the InputParas structures, and the current time
     InputL(i) = Ef1(t, InputParasL);
     InputR(i) = ErN(t, InputParasR);
@@ -169,15 +201,31 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
 
     Efprev(2:Nz) = Ef(2:Nz);    % populating Efprev
 
+
     % nan values that get assigned the boundaries of forward and reverse electric fields
     OutputR(i) = Ef(Nz)*(1-RR);     % Adding the loss from the mirrors reflectivity
     OutputL(i) = Er(1)*(1-RL);      % Adding the loss from the mirrors reflectivity
+
+    % calculating S, photon density
+    S = (abs(Ef).^2 + abs(Er).^2).*EtoP*1e-6;
+
+    if (t < Ion || t > Ioff)
+        I_injv = I_off;
+    else
+        I_injv = I_on;
+    end
+
+    % Scale N accordingly 
+    Stim = gain.*(N - Ntr).*S;
+    N = (N + dt*(I_injv/eVol - Stim))./(1 + dt/taun);
+    Nave(i) = mean(N);
+
 
     % Create the plots that visualize the forward and reverse propagating
     % electric fields
     if mod(i,plotN) == 0            % updates every plotN iterations
         % Real and imaginary parts of forward propagating wave
-        subplot(2,2,1)
+        subplot(3,2,1)
         plot(z*10000,real(Ef),'r'); hold on
         plot(z*10000,imag(Ef),'r--'); hold off
         xlim(XL*1e4)
@@ -186,22 +234,38 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         ylabel('E_f')
         legend('\Re','\Im')
         hold off
-        % Real and imaginary parts of the reverse propagating wave
-        subplot(2,2,2)
-        plot(z*10000,real(Er),'b'); hold on
-        plot(z*10000,imag(Er),'b--'); hold off
-        xlim(XL*1e4)
-        ylim(YL)
+
+        subplot(3,2,2)
+        plot(z*10000, N, 'r'); hold on
+        xlim([0, L*10000])
+        ylim(Nlim)
         xlabel('z(\mum)')
-        ylabel('E_r')
-        legend('\Re','\Im')
+        ylabel('N')
         hold off
+
+        subplot(3, 2, [3,4])
+        plot(time*1e12, Nave, 'b');
+        xlim([0, Nt*dt*1e12])
+        ylim(Nlim)
+        xlabel('time(ps)')
+        ylabel('Nave')
+
+        % Real and imaginary parts of the reverse propagating wave
+        % subplot(3,2,2)
+        % plot(z*10000,real(Er),'b'); hold on
+        % plot(z*10000,imag(Er),'b--'); hold off
+        % xlim(XL*1e4)
+        % ylim(YL)
+        % xlabel('z(\mum)')
+        % ylabel('E_r')
+        % legend('\Re','\Im')
+        % hold off
         % Input and Output signals over time
-        subplot(2,2,3);
+        subplot(3,2,[5,6]);
         plot(time*1e12, real(InputL), 'r'); hold on
         plot(time*1e12, real(OutputR), 'g'); 
         plot(time*1e12, real(InputR), 'b');
-        plot(time*1e12, real(OutputL), 'm');
+        plot(time*1e12, imag(OutputL), 'm--');
         xlim([0,Nt*dt*1e12])            % Sets total simulation time (number of time steps * length of each step)
         ylim(YL)                        % Ensures plot is big enough for electric field amplitude
         xlabel('time(ps)')
@@ -209,11 +273,11 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
         hold off
 
-        subplot(2,2,4);
-        plot (z*1000, kappa, 'r');
-        xlabel('z(\mum)')
-        ylabel('kappa')
-        hold off
+        % subplot(3,2,[3,4]);
+        % plot (z*1000, kappa, 'r');
+        % xlabel('z(\mum)')
+        % ylabel('kappa')
+        % hold off
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
     Efp = Ef;
