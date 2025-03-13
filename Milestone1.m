@@ -15,19 +15,20 @@ c_h = c_hb*2*pi;            % 2 pi Dirac constant
 g_fwhm = 3.53e+012/10;
 LGamma = g_fwhm*2*pi;
 Lw0 = 0.0;
-LGain = 0.1;
+%LGain = 0.0;
+LGain = 0.05;
 
-RL = 0;                  % Left reflectivity coefficient
-RR = 0;                  % Right reflectivity coefficient
+RL = 0.0;                  % Left reflectivity coefficient
+RR = 0.0;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 5e6;   % Amplitude of electric field
+InputParasL.E0 = 0e6;   % Amplitude of electric field (should be about 5e6)
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
 InputParasL.phi = 0;    % Starting phase of the wave
-InputParasL.rep = 5e-10;   % Number of repeating waves to send
+InputParasL.rep = 2.5e-10;   % Number of repeating waves to send
 InputParasR = 0;        % No wave starting from the right
 
 kappa0 = 0;           % Creating a matrix 
@@ -39,12 +40,12 @@ vg = c_c/n_g*1e2;       % TWM cm/s group velocity
 Lambda = 1550e-9;       % wavelength in nm 
 f0 = c_c/Lambda;
 
-plotN = 100;             % value to know which N you should plot the points for
+plotN = 500;             % value to know which N you should plot the points for
 
 L = 1000e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
 %YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
-YL = [0,1e7];
+YL = [-3e7,3e7];
 
 Nz = 100;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
@@ -62,24 +63,6 @@ InputL = nan(1,Nt);     % Row vector of size 1 - Nt
 InputR = nan(1,Nt);     % Row vector of size 1 - Nt
 OutputL = nan(1,Nt);    % Row vector of size 1 - Nt
 OutputR = nan(1,Nt);    % Row vector of size 1 - Nt
-
-% generating N variables and limits for plotting
-Ntr = 1e18;
-Nlim = [0, 5*Ntr];
-N = ones(size(z))*Ntr;
-Nave = nan(1,Nt);
-Nave(1) = mean(N);
-gain = vg*2.5e-16;
-eVol = 1.5e-10*c_q;
-% Starting the injection at 0.25ps, ending injection at 3ps
-Ion = 0.25e-9;
-Ioff = 3e-9;
-I_off = 0.024;
-I_on = 0.1;
-taun = 1e-9;
-Zg = sqrt(c_mu_0/c_eps_0)/n_g;
-EtoP = 1/(Zg*f0*vg*1e-2*c_hb);
-alpha = 0;
 
 kappa = kappa0*ones(size(z));   % Adding kappa terms for grating
 kappa(z<L*kappaStart) = 0;
@@ -119,10 +102,33 @@ OutputL(1) = Er(1);
 Ef(1) = InputL(1);
 Er(Nz) = InputR(1);   
 
+% generating N variables and limits for plotting
+Ntr = 1e18;
+Nlim = [0, 5*Ntr];
+N = ones(size(z))*Ntr;
+Nave = nan(1,Nt);
+Nave(1) = mean(N);
+gain = vg*2.5e-16;
+eVol = 1.5e-10*c_q;
+% Starting the injection at 0.25ps, ending injection at 3ps
+Ion = 0.25e-9;
+Ioff = 3e-9;
+I_off = 0.024;
+I_on = 0.1;
+taun = 1e-9;
+Zg = sqrt(c_mu_0/c_eps_0)/n_g;
+EtoP = 1/(Zg*f0*vg*1e-2*c_hb);
+alpha = 0;
+
 % SPE amplification variables
-beta_spe = .3e5;
+beta_spe = .3e-5;
 gamma = 1.0;
-SPE = 0;
+SPE = 7;
+
+% SPE amplification variables
+% beta_spe = 0;
+% gamma = 0;
+% SPE = 0;
 
 % Create a figure that contains three sublots, each display different data
 % about the electric fields inputs and outputs
@@ -155,22 +161,22 @@ hold off
 for i = 2:Nt        % Iterate from 2 to the number of time steps
     t = dt*(i-1);   % Determine next time according to spacial step size and current iteration
     time(i) = t;    % Increment time
-    
-    % if (t == 0.5e-9)
-    %     % nan values that get assigned values from the SourceFct with the InputParas structures, and the current time
-    %     InputL(i) = Ef1(t, InputParasL);
-    %     InputR(i) = ErN(t, InputParasR);
-    % 
-    %     Ef(1) = InputL(i) + RL*Er(1);       % Adding reflectivity coefficients
-    %     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
-    % end
-        
+
     % nan values that get assigned values from the SourceFct with the InputParas structures, and the current time
     InputL(i) = Ef1(t, InputParasL);
     InputR(i) = ErN(t, InputParasR);
 
     Ef(1) = InputL(i) + RL*Er(1);       % Adding reflectivity coefficients
     Er(Nz) = InputR(i) + RR*Ef(Nz);     % Adding reflectivity coefficients
+
+    beta_r = 0;            % Real part of the detuning 
+    gain_z = gain.*(N - Ntr)./vg;
+    beta_i = (gain_z - alpha)./2;            % Imaginary part of the detuning
+    beta = beta_r + 1i*beta_i;
+    exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
+
+    Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Efp(1:Nz-1) + 1i*dz*kappa(2:Nz).*Erp(2:Nz);   
+    Er(1:Nz-1) = fsync*exp_det(2:Nz).*Erp(2:Nz) + 1i*dz*kappa(2:Nz).*Efp(1:Nz-1);
 
     Pf(1) = 0;
     Pf(Nz) = 0;
@@ -185,13 +191,6 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
 
     Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));
     Er(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));
-
-
-    beta_r = 0;            % Real part of the detuning 
-    gain_z = gain.*(N - Ntr)./vg;
-    beta_i = (gain_z - alpha)./2;            % Imaginary part of the detuning
-    beta = beta_r + 1i*beta_i;
-    exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
 
     % SPE Amplification
     A = sqrt(gamma*beta_spe*c_hb*f0*L*1e-2/taun)/(2*Nz);
@@ -209,26 +208,6 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     Ef = Ef + EsF;
     Er = Er + EsR;
 
-    % Updates the current Ef and Er over the spatial grid, ensuring to
-    % normalize (fsync scaling) and accounts for the exponential gain/loss according to detuning parameters
-    % does element wise multiplication of the corresponding exponential
-    if i >= 3
-        % Efprev has been populated
-        Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);
-        Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Efprev(1:Nz-1);
-    else
-        % Efprev has not been populated
-        Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Ef(1:Nz-1) + 1i*dz*kappa(2:Nz).*Er(2:Nz);   
-        Er(1:Nz-1) = fsync*exp_det(2:Nz).*Er(2:Nz) + 1i*dz*kappa(2:Nz).*Ef(1:Nz-1);
-    end 
-
-    Efprev(2:Nz) = Ef(2:Nz);    % populating Efprev
-
-
-    % nan values that get assigned the boundaries of forward and reverse electric fields
-    OutputR(i) = Ef(Nz)*(1-RR);     % Adding the loss from the mirrors reflectivity
-    OutputL(i) = Er(1)*(1-RL);      % Adding the loss from the mirrors reflectivity
-
     % calculating S, photon density
     S = (abs(Ef).^2 + abs(Er).^2).*EtoP*1e-6;
 
@@ -243,6 +222,11 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     N = (N + dt*(I_injv/eVol - Stim))./(1 + dt/taun);
     Nave(i) = mean(N);
 
+
+    % nan values that get assigned the boundaries of forward and reverse electric fields
+    OutputR(i) = Ef(Nz)*(1-RR);     % Adding the loss from the mirrors reflectivity
+    OutputL(i) = Er(1)*(1-RL);      % Adding the loss from the mirrors reflectivity
+
     % Create the plots that visualize the forward and reverse propagating
     % electric fields
     if mod(i,plotN) == 0            % updates every plotN iterations
@@ -251,18 +235,25 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         plot(z*10000,real(Ef),'r'); hold on
         plot(z*10000,imag(Ef),'r--'); hold off
         xlim(XL*1e4)
-        ylim(YL)
+        ylim([-150, 150])
         xlabel('z(\mum)')
         ylabel('E_f')
         legend('\Re','\Im')
         hold off
 
         subplot(3,2,2)
-        plot(z*10000, N, 'r'); hold on
+        yyaxis left
+        plot(z*10000, N, 'b'); 
         xlim([0, L*10000])
         ylim(Nlim)
-        xlabel('z(\mum)')
         ylabel('N')
+        yyaxis right
+        plot(z*10000, S, 'r');
+        xlim([0, L*10000])
+        ylim([0, 3e16])
+        ylabel('S')
+        xlabel('z(\mum)')
+        legend('N', 'S')
         hold off
 
         subplot(3, 2, [3,4])
@@ -313,41 +304,57 @@ fftOutputR = fftshift(fft(OutputR));
 fftOutputL = fftshift(fft(OutputL));
 omega = fftshift(wspace(time));
 
+f_GHz = (omega /(2 * pi * 10^12));
+
 fftInputL = fftshift(fft(InputL));
 
 % Plot the Fourier Transform results as frequency
 % Plot of right output vs time
 figure('name', 'Fields')
-subplot(4,1,1)
-plot(time*1e12, real(OutputR),'m'); hold on
-plot(time*1e12, real(OutputL),'b');
+subplot(3,1,1)
+plot(time*1e12, real(OutputR),'b'); hold on
+plot(time*1e12, real(InputL),'g');
 xlabel('time(ps)')
 ylabel('Output')
-legend('Right', 'Left')
-hold off
-
-% Plot of absolute value of fourier transform vs omega
-subplot(4,1,2)
-plot(omega,abs(fftOutputR),'y'); hold on
-plot(omega,abs(fftOutputL),'r');
-xlabel('omega')
-ylabel('FFT |E|')
-legend('Right', 'Left')
-hold off
-% Inputs and Outputs over time in picoseconds
-subplot(4,1,3)
-plot(omega,unwrap(angle(fftOutputR)),'g'); hold on
-plot(omega,unwrap(angle(fftOutputL)),'c');
-xlabel('omega')
-ylabel('FFT Angle')
-legend('Right', 'Left')
-hold off
-
-% Magnitude of input vs output in frequency domain
-subplot(4,1,4)
-plot(omega,abs(fftOutputR),'g'); hold on
-plot(omega,abs(fftInputL),'b');
-xlabel('omega')
-ylabel('FFT |E|')
 legend('Output', 'Input')
 hold off
+
+subplot(3,1,2)
+plot(f_GHz, 20*log10(abs(fftOutputR)), 'b'); hold on
+plot(f_GHz, 20*log10(abs(fftInputL)), 'g');
+xlabel('GHz')
+ylabel('20log10|E|')
+legend('Output', 'Input')
+
+subplot(3,1,3)
+plot(omega, unwrap(angle(fftOutputR)), 'b'); hold on
+plot(omega, unwrap(angle(fftInputL)), 'g');
+xlabel('GHz')
+ylabel('phase')
+legend('Output', 'Input')
+% 
+% % Plot of absolute value of fourier transform vs omega
+% subplot(4,1,2)
+% plot(omega,abs(fftOutputR),'y'); hold on
+% plot(omega,abs(fftOutputL),'r');
+% xlabel('omega')
+% ylabel('FFT |E|')
+% legend('Right', 'Left')
+% hold off
+% % Inputs and Outputs over time in picoseconds
+% subplot(4,1,3)
+% plot(omega,unwrap(angle(fftOutputR)),'g'); hold on
+% plot(omega,unwrap(angle(fftOutputL)),'c');
+% xlabel('omega')
+% ylabel('FFT Angle')
+% legend('Right', 'Left')
+% hold off
+% 
+% % Magnitude of input vs output in frequency domain
+% subplot(4,1,4)
+% plot(omega,abs(fftOutputR),'g'); hold on
+% plot(omega,abs(fftInputL),'b');
+% xlabel('omega')
+% ylabel('FFT |E|')
+% legend('Output', 'Input')
+% hold off
