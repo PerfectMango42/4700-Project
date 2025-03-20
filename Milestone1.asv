@@ -16,10 +16,10 @@ g_fwhm = 3.53e+012/10;
 LGamma = g_fwhm*2*pi;
 Lw0 = 0.0;
 %LGain = 0.0;
-LGain = 0.05;
+LGain = 0.015;
 
-RL = 0.1;                  % Left reflectivity coefficient
-RR = 0.1;                  % Right reflectivity coefficient
+RL = 0.5;                  % Left reflectivity coefficient
+RR = 0.5;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
@@ -40,15 +40,14 @@ vg = c_c/n_g*1e2;       % TWM cm/s group velocity
 Lambda = 1550e-9;       % wavelength in nm 
 f0 = c_c/Lambda;
 
-plotN = 100;             % value to know which N you should plot the points for
+plotN = 500;             % value to know which N you should plot the points for
 
-L = 500e-6*1e2;        % cm
+L = 300e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
 %YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
-%YL = [-3e7,3e7];
-YL = [0, 7e6];
+YL = [-3e7,3e7];
 
-Nz = 51;               % total grid steps in the graph
+Nz = 100;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
 dt = dz/vg;             % time step with the corresponding spacial step size
 fsync = dt*vg/dz;       % Always equals 1, syncronizing normalized factor
@@ -105,7 +104,7 @@ Er(Nz) = InputR(1);
 
 % generating N variables and limits for plotting
 Ntr = 1e18;
-Nlim = [0, 2*Ntr];
+Nlim = [0, 5*Ntr];
 N = ones(size(z))*Ntr;
 Nave = nan(1,Nt);
 Nave(1) = mean(N);
@@ -113,9 +112,9 @@ gain = vg*2.5e-16;
 eVol = 1.5e-10*c_q;
 % Starting the injection at 0.25ps, ending injection at 3ps
 Ion = 0.05e-9;
-Ioff = 1e-9;
-I_off = 0.024; % supposed ot be 0.024
-I_on = 0.2; % supposed to be 0.1
+Ioff = 3e-9;
+I_off = 0.024;
+I_on = 0.15;
 taun = 1e-9;
 Zg = sqrt(c_mu_0/c_eps_0)/n_g;
 EtoP = 1/(Zg*f0*vg*1e-2*c_hb);
@@ -124,7 +123,7 @@ alpha = 0;
 % SPE amplification variables
 beta_spe = .3e-5;
 gamma = 1.0;
-SPE = 7;
+SPE = 2;
 
 % SPE amplification variables
 % beta_spe = 0;
@@ -137,6 +136,7 @@ SPE = 7;
 figure('name', 'Fields')
 subplot(3,1,1)
 plot(z*10000,real(Ef),'r');
+hold off
 xlabel('z(\mum)')
 ylabel('E_f')
 % Reverse propagating electric field at the right side
@@ -235,7 +235,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         plot(z*10000,real(Ef),'r'); hold on
         plot(z*10000,imag(Ef),'r--'); hold off
         xlim(XL*1e4)
-        %ylim([-150, 150])
+        ylim([-150, 150])
         xlabel('z(\mum)')
         ylabel('E_f')
         legend('\Re','\Im')
@@ -276,11 +276,10 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         % Input and Output signals over time
         subplot(3,2,[5,6]);
         plot(time*1e12, real(InputL), 'r'); hold on
-        plot(time*1e12, abs(real(OutputR)), 'g'); 
+        plot(time*1e12, real(OutputR), 'g'); 
         plot(time*1e12, real(InputR), 'b');
-        plot(time*1e12, abs(imag(OutputL)), 'm--');
-        %xlim([0,Nt*dt*1e12])            % Sets total simulation time (number of time steps * length of each step)
-        xlim([(Nt*dt*1e12)*0.05, (Nt*dt*1e12)*0.5])
+        plot(time*1e12, imag(OutputL), 'm--');
+        xlim([0,Nt*dt*1e12])            % Sets total simulation time (number of time steps * length of each step)
         ylim(YL)                        % Ensures plot is big enough for electric field amplitude
         xlabel('time(ps)')
         ylabel('0')
