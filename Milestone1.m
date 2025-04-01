@@ -15,14 +15,15 @@ c_h = c_hb*2*pi;            % 2 pi Dirac constant
 g_fwhm = 3.53e+012/10;
 LGamma = g_fwhm*2*pi;
 Lw0 = 0.0;
-LGain = 0.1;
+%LGain = 0.1;
+LGain = 0.0;
 
 RL = 0;                  % Left reflectivity coefficient
 RR = 0;                  % Right reflectivity coefficient
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 10e6;   % Amplitude of electric field
+InputParasL.E0 = 5e6;   % Amplitude of electric field
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
@@ -112,6 +113,7 @@ N = ones(size(z))*Ntr;
 Nave = nan(1,Nt);
 Nave(1) = mean(N);
 gain = vg*2.5e-16;
+%gain = 0;
 eVol = 1.5e-10*c_q;
 % Starting the injection at 0.25ps, ending injection at 3ps
 Ion = 0.25e-9;
