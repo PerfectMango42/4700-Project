@@ -25,7 +25,7 @@ RR = 0.0;
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 5e6;   % Amplitude of electric field (should be about 5e6)
+InputParasL.E0 = 0e6;   % Amplitude of electric field (should be about 5e6)
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
@@ -47,8 +47,8 @@ plotN = 100;             % value to know which N you should plot the points for
 L = 500e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
 %YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
-%YL = [-3e7,3e7];
-YL = [0, 3e7];
+YL = [-5e6,5e6];
+% YL = [0, 3e7];
 
 Nz = 51;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
@@ -278,9 +278,9 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         % Input and Output signals over time
         subplot(3,2,[5,6]);
         plot(time*1e12, real(InputL), 'r'); hold on
-        plot(time*1e12, abs(real(OutputR)), 'g'); 
+        plot(time*1e12, (real(OutputR)), 'g'); % abs()
         plot(time*1e12, real(InputR), 'b');
-        plot(time*1e12, abs(imag(OutputL)), 'm--');
+        plot(time*1e12, (imag(OutputL)), 'm--'); % abs()
         %xlim([0,Nt*dt*1e12])            % Sets total simulation time (number of time steps * length of each step)
         xlim([(Nt*dt*1e12)*0.05, (Nt*dt*1e12)*0.5])
         ylim(YL)                        % Ensures plot is big enough for electric field amplitude
