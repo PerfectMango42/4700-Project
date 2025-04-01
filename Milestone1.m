@@ -18,12 +18,14 @@ Lw0 = 0.0;
 %LGain = 0.0;
 LGain = 0.05;
 
-RL = 0.1;                  % Left reflectivity coefficient
-RR = 0.1;                  % Right reflectivity coefficient
+% RL = 0.1;                  % Left reflectivity coefficient
+% RR = 0.1;                  % Right reflectivity coefficient
+RL = 0.0;
+RR = 0.0;
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
-InputParasL.E0 = 0e6;   % Amplitude of electric field (should be about 5e6)
+InputParasL.E0 = 5e6;   % Amplitude of electric field (should be about 5e6)
 InputParasL.we = 0;     % Frequency offset
 InputParasL.t0 = 2e-12; % Time offset of Gaussian wave
 InputParasL.wg = 5e-13; % Standard deviation of the wave
@@ -46,7 +48,7 @@ L = 500e-6*1e2;        % cm
 XL = [0,L];             % X axis range in a matrix
 %YL = [-2*InputParasL.E0,2*InputParasL.E0];% Y axis range in a matrix
 %YL = [-3e7,3e7];
-YL = [0, 7e6];
+YL = [0, 3e7];
 
 Nz = 51;               % total grid steps in the graph
 dz = L/(Nz-1);          % spacial step size along the length (L)
@@ -105,7 +107,7 @@ Er(Nz) = InputR(1);
 
 % generating N variables and limits for plotting
 Ntr = 1e18;
-Nlim = [0, 2*Ntr];
+Nlim = [0, 4*Ntr];
 N = ones(size(z))*Ntr;
 Nave = nan(1,Nt);
 Nave(1) = mean(N);
