@@ -18,8 +18,11 @@ Lw0 = 0.0;
 %LGain = 0.0;
 LGain = 0.05;
 
-RL = 0.1;                  % Left reflectivity coefficient
-RR = 0.1;                  % Right reflectivity coefficient
+% RL = 0.1;                  % Left reflectivity coefficient
+% RR = 0.1;                  % Right reflectivity coefficient
+
+RL = 0;
+RR = 0;
 
 % creating structure InputParasL and assigning values in the structure
 % But InputParasR is just a regular scalar value
@@ -31,7 +34,7 @@ InputParasL.phi = 0;    % Starting phase of the wave
 InputParasL.rep = 2.5e-10;   % Number of repeating waves to send
 InputParasR = 0;        % No wave starting from the right
 
-kappa0 = 0;           % Creating a matrix 
+          % Creating a matrix 
 kappaStart = 1/3;
 kappaStop = 2/3;
 
@@ -48,7 +51,7 @@ XL = [0,L];             % X axis range in a matrix
 %YL = [-3e7,3e7];
 YL = [0, 7e6];
 
-Nz = 51;               % total grid steps in the graph
+Nz = 51;               % total grid steps in the graph (should be 51)
 dz = L/(Nz-1);          % spacial step size along the length (L)
 dt = dz/vg;             % time step with the corresponding spacial step size
 fsync = dt*vg/dz;       % Always equals 1, syncronizing normalized factor
@@ -65,14 +68,70 @@ InputR = nan(1,Nt);     % Row vector of size 1 - Nt
 OutputL = nan(1,Nt);    % Row vector of size 1 - Nt
 OutputR = nan(1,Nt);    % Row vector of size 1 - Nt
 
+
+kappa0 = 100; 
 kappa = kappa0*ones(size(z));   % Adding kappa terms for grating
-kappa(z<L*kappaStart) = 0;
-kappa(z>L*kappaStop) = 0;
+% kappa(z<L*kappaStart) = 0;
+% kappa(z>L*kappaStop) = 0;
+
+% space_between = L/50;
+% width_grating = L/100;
+% 
+% number_gratings = 150;
+% start_position = 0;
+% end_position = 0;
+% 
+% for i = 1 : number_gratings
+% 
+%     if (number_gratings == 1)
+%         start_position = 0;
+%     else
+%         start_position = end_position + space_between;
+%     end
+% 
+%     end_position = start_position + width_grating;
+% 
+%     kappa_index = (z >= start_position & z < end_position);
+% 
+%     kappa(kappa_index) = 0;
+% end
+
+grating_empty_start = 1/10;
+grating_empty_end = 9/10;
+
+grating_4_start = 7/80;
+grating_4_end = 74/80;
+
+
+kappa1 = 150;
+
+kappa(z>L*grating_empty_start & z<L*grating_empty_end) = 0;
+
+kappa(z>L*grating_4_start & z<L*grating_empty_start) = kappa1;
+
+kappa(z>L*grating_empty_end & z<L*grating_4_end) = kappa1;
+
+% kappa(z>L*grating_empty_start & z<L*grating_4_start) = 0;
+% kappa(z>L*grating_4_end & z<L*grating_empty_end) = 0;
+% 
+% 
+% kappa(z>L*grating_4_start & z<L*grating_4_end) = kappa0;
+
+
 
 % Initializing Electric fields
 Ef = zeros(size(z));    % z has Nz elements 
 Er = zeros(size(z));    % z has Nz elements
 Efprev = zeros(size(z));
+
+phi_vector = zeros(size(z));
+
+length_z = length(z);
+index_first_phase = round(length_z / 4);
+index_second_phase = round(3 * length_z / 4);
+
+phi_vector(index_first_phase) = pi/8;
+phi_vector(index_second_phase) = pi/8;
 
 Pf = zeros(size(z));
 Pr = zeros(size(z));
@@ -113,7 +172,7 @@ gain = vg*2.5e-16;
 eVol = 1.5e-10*c_q;
 % Starting the injection at 0.25ps, ending injection at 3ps
 Ion = 0.05e-9;
-Ioff = 1e-9;
+Ioff = 2e-9;
 I_off = 0.024; % supposed ot be 0.024
 I_on = 0.2; % supposed to be 0.1
 taun = 1e-9;
@@ -175,6 +234,9 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     beta = beta_r + 1i*beta_i;
     exp_det = exp(-1i*dz*beta);                 % Creates the exponential gain/loss according to detuning term (array of exponential terms)
 
+    % Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Efp(1:Nz-1) + 1i*dz*kappa(2:Nz).*Erp(2:Nz);   
+    % Er(1:Nz-1) = fsync*exp_det(2:Nz).*Erp(2:Nz) + 1i*dz*kappa(2:Nz).*Efp(1:Nz-1);
+
     Ef(2:Nz) = fsync*exp_det(1:Nz-1).*Efp(1:Nz-1) + 1i*dz*kappa(2:Nz).*Erp(2:Nz);   
     Er(1:Nz-1) = fsync*exp_det(2:Nz).*Erp(2:Nz) + 1i*dz*kappa(2:Nz).*Efp(1:Nz-1);
 
@@ -191,6 +253,10 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
 
     Ef(2:Nz-1) = Ef(2:Nz-1) - LGain*(Ef(2:Nz-1)-Pf(2:Nz-1));
     Er(2:Nz-1) = Er(2:Nz-1) - LGain*(Er(2:Nz-1)-Pr(2:Nz-1));
+
+
+    Ef(2:Nz) = exp(1i*phi_vector(2:Nz)).*Ef(2:Nz);
+    Er(1:Nz-1) = exp(1i*phi_vector(1:Nz-1)).*Er(1:Nz-1);
 
     % SPE Amplification
     A = sqrt(gamma*beta_spe*c_hb*f0*L*1e-2/taun)/(2*Nz);
@@ -231,7 +297,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
     % electric fields
     if mod(i,plotN) == 0            % updates every plotN iterations
         % Real and imaginary parts of forward propagating wave
-        subplot(3,2,1)
+        subplot(4,2,1)
         plot(z*10000,real(Ef),'r'); hold on
         plot(z*10000,imag(Ef),'r--'); hold off
         xlim(XL*1e4)
@@ -241,7 +307,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         legend('\Re','\Im')
         hold off
 
-        subplot(3,2,2)
+        subplot(4,2,2)
         yyaxis left
         plot(z*10000, N, 'b'); 
         xlim([0, L*10000])
@@ -256,7 +322,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         legend('N', 'S')
         hold off
 
-        subplot(3, 2, [3,4])
+        subplot(4, 2, [3,4])
         plot(time*1e12, Nave, 'b');
         xlim([0, Nt*dt*1e12])
         ylim(Nlim)
@@ -274,7 +340,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         % legend('\Re','\Im')
         % hold off
         % Input and Output signals over time
-        subplot(3,2,[5,6]);
+        subplot(4,2,[5,6]);
         plot(time*1e12, real(InputL), 'r'); hold on
         plot(time*1e12, abs(real(OutputR)), 'g'); 
         plot(time*1e12, real(InputR), 'b');
@@ -287,11 +353,11 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
         legend('Left Input', 'Right Output', 'Right Input', 'Left Output', 'Location', 'east')
         hold off
 
-        % subplot(3,2,[3,4]);
-        % plot (z*1000, kappa, 'r');
-        % xlabel('z(\mum)')
-        % ylabel('kappa')
-        % hold off
+        subplot(4,2,[7,8]);
+        plot (z*10000, kappa, 'r');
+        xlabel('z(\mum)')
+        ylabel('kappa')
+        hold off
         pause(0.01)                     % Short delay in iterations of for loop (sleep())
     end
     Efp = Ef;
@@ -301,6 +367,7 @@ for i = 2:Nt        % Iterate from 2 to the number of time steps
 end
 
 % Create the Fourier Transform calculation 
+non_shift_fftOutputR = fft(OutputR);
 fftOutputR = fftshift(fft(OutputR));
 fftOutputL = fftshift(fft(OutputL));
 omega = fftshift(wspace(time));
@@ -333,6 +400,12 @@ plot(omega, unwrap(angle(fftInputL)), 'g');
 xlabel('GHz')
 ylabel('phase')
 legend('Output', 'Input')
+
+% subplot(4,1,4)
+% plot(f_GHz, 20*log10(abs(non_shift_fftOutputR)), 'b'); 
+% xlabel('GHz')
+% ylabel('20log10|E|')
+% legend('Output')
 % 
 % % Plot of absolute value of fourier transform vs omega
 % subplot(4,1,2)
