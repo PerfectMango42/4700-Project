@@ -103,7 +103,7 @@ grating_4_start = 7/80;
 grating_4_end = 74/80;
 
 
-kappa1 = 150;
+kappa1 = 100;
 
 kappa(z>L*grating_empty_start & z<L*grating_empty_end) = 0;
 
