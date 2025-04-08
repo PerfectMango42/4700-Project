@@ -74,50 +74,38 @@ kappa = kappa0*ones(size(z));   % Adding kappa terms for grating
 % kappa(z<L*kappaStart) = 0;
 % kappa(z>L*kappaStop) = 0;
 
-% space_between = L/50;
-% width_grating = L/100;
-% 
-% number_gratings = 150;
-% start_position = 0;
-% end_position = 0;
-% 
-% for i = 1 : number_gratings
-% 
-%     if (number_gratings == 1)
-%         start_position = 0;
-%     else
-%         start_position = end_position + space_between;
-%     end
-% 
-%     end_position = start_position + width_grating;
-% 
-%     kappa_index = (z >= start_position & z < end_position);
-% 
-%     kappa(kappa_index) = 0;
-% end
+space_between = L/50;
+width_grating = L/100;
+number_gratings = 150;
+start_position = 0;
+end_position = 0;
+for i = 1 : number_gratings
 
-grating_empty_start = 1/10;
-grating_empty_end = 9/10;
+    if (number_gratings == 1)
+        start_position = 0;
+    else
+        start_position = end_position + space_between;
+    end
 
-grating_4_start = 7/80;
-grating_4_end = 74/80;
+    end_position = start_position + width_grating;
 
+    kappa_index = (z >= start_position & z < end_position);
 
-kappa1 = 100;
+    kappa(kappa_index) = 0;
+end
+
+grating_empty_start = 2/10;
+grating_empty_end = 8/10;
+
+grating_gradient_start = 1/10;
+grating_gradient_end = 9/10;
+
+kappa1 = 50;
 
 kappa(z>L*grating_empty_start & z<L*grating_empty_end) = 0;
 
-kappa(z>L*grating_4_start & z<L*grating_empty_start) = kappa1;
-
-kappa(z>L*grating_empty_end & z<L*grating_4_end) = kappa1;
-
-% kappa(z>L*grating_empty_start & z<L*grating_4_start) = 0;
-% kappa(z>L*grating_4_end & z<L*grating_empty_end) = 0;
-% 
-% 
-% kappa(z>L*grating_4_start & z<L*grating_4_end) = kappa0;
-
-
+% kappa(z>L*grating_gradient_start & z<L*grating_empty_start) = kappa1;
+% kappa(z>L*grating_empty_end & z<L*grating_gradient_end) = kappa1;
 
 % Initializing Electric fields
 Ef = zeros(size(z));    % z has Nz elements 
@@ -130,8 +118,8 @@ length_z = length(z);
 index_first_phase = round(length_z / 4);
 index_second_phase = round(3 * length_z / 4);
 
-phi_vector(index_first_phase) = pi/8;
-phi_vector(index_second_phase) = pi/8;
+phi_vector(index_first_phase) = pi/2;
+% phi_vector(index_second_phase) = pi/4;
 
 Pf = zeros(size(z));
 Pr = zeros(size(z));
